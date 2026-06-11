@@ -1,7 +1,4 @@
 # BatteryHealth Sensor
-
-English first, German second.
-
 ## EN
 
 ### Overview
