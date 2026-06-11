@@ -20,6 +20,16 @@ Setup is config-flow-only in Home Assistant.
   - nominal_capacity_kwh (nominal battery capacity)
   - invert_power_sign (enable only if discharge is reported as negative)
 
+### Install via HACS
+
+1. Open HACS in Home Assistant.
+2. Go to Integrations.
+3. Open the menu and select Custom repositories.
+4. Repository URL: https://github.com/tigra889/batteryhealth
+5. Category: Integration.
+6. Install BatteryHealth Sensor and restart Home Assistant.
+7. Add the integration in Settings -> Devices & Services.
+
 ### Calculation Logic
 
 1. Integrate discharge energy from positive power:
@@ -46,8 +56,8 @@ Setup is config-flow-only in Home Assistant.
 
 ### Full Flowchart
 
-```mermaid
-flowchart TD
+```mermaid [..\SOC and Power State Change-2026-06-11-201809.png]
+flowchart TD 
    A[State change event<br/>SOC or Power] --> B{SOC entity available?}
    B -- No --> B1[Set SOC/Power outputs to None<br/>Notify listeners] --> Z[End]
    B -- Yes --> C{SOC value valid?}
@@ -147,6 +157,16 @@ Die Einrichtung erfolgt ausschliesslich ueber den Config Flow.
   - power_entity (Leistungssensor)
   - nominal_capacity_kwh (Nennkapazitaet)
   - invert_power_sign (nur aktivieren, wenn Entladung negativ geliefert wird)
+
+### Installation ueber HACS
+
+1. HACS in Home Assistant oeffnen.
+2. Zu Integrations wechseln.
+3. Menue oeffnen und Benutzerdefinierte Repositories waehlen.
+4. Repository URL: https://github.com/tigra889/batteryhealth
+5. Kategorie: Integration.
+6. BatteryHealth Sensor installieren und Home Assistant neu starten.
+7. Integration unter Einstellungen -> Geraete & Dienste hinzufuegen.
 
 ### Berechnungslogik
 
