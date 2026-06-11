@@ -1,0 +1,2 @@
+# BatteryHealth is configured only via UI Config Flow.
+# Home Assistant: Settings -> Devices & Services -> Add Integration -> BatteryHealth Sensor
