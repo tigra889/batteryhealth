@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 title: BatteryHealth
 views:
   - title: Overview
@@ -100,3 +101,107 @@ views:
             name: Entladen gesamt
           - entity: sensor.battery_health_full_charge_cycles
             name: Vollstaendige Ladezyklen
+=======
+title: BatteryHealth
+views:
+  - title: Overview
+    path: batteryhealth
+    icon: mdi:battery-heart-variant
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.battery_health_soh_current
+            name: SOH Aktuell
+            min: 0
+            max: 110
+            needle: true
+            severity:
+              red: 0
+              orange: 60
+              yellow: 80
+              green: 90
+          - type: gauge
+            entity: sensor.battery_health_soh_average
+            name: SOH Mittelwert
+            min: 0
+            max: 110
+            needle: true
+            severity:
+              red: 0
+              orange: 60
+              yellow: 80
+              green: 90
+      - type: markdown
+        content: >-
+          {% set soh = states('sensor.battery_health_soh_current') | float(0) %}
+          ## SOH Bewertung
+
+          {% if soh <= 60 %}
+          <span style="color:#d32f2f;"><b>Schlecht</b> (<= 60%)</span>
+          {% elif soh <= 80 %}
+          <span style="color:#ef6c00;"><b>Mittel</b> (60-80%)</span>
+          {% elif soh <= 90 %}
+          <span style="color:#f9a825;"><b>Gut</b> (80-90%)</span>
+          {% else %}
+          <span style="color:#2e7d32;"><b>Sehr gut</b> (> 90%)</span>
+          {% endif %}
+
+          Aktuell: **{{ soh | round(2) }} %**
+
+          Legende: Rot <= 60, Orange 60-80, Gelb 80-90, Gruen > 90.
+      - type: entities
+        title: Kernwerte
+        show_header_toggle: false
+        entities:
+          - entity: sensor.battery_health_soh_current
+            name: SOH aktuell
+          - entity: sensor.battery_health_soh_average
+            name: SOH Mittelwert
+          - entity: sensor.battery_health_soh_raw
+            name: SOH Rohwert
+          - entity: sensor.battery_health_c_estimated
+            name: C_estimated
+          - entity: sensor.battery_health_c_nominal
+            name: C_nominal
+          - entity: sensor.battery_health_full_charge_cycles
+            name: Vollstaendige Ladezyklen
+          - entity: sensor.battery_health_soh_measurements
+            name: SOH Messungen
+      - type: entities
+        title: Betriebswerte
+        show_header_toggle: false
+        entities:
+          - entity: sensor.battery_health_soc_current
+            name: SOC aktuell
+          - entity: sensor.battery_health_soc_reference
+            name: SOC Referenz
+          - entity: sensor.battery_health_soc_drop
+            name: SOC Drop
+          - entity: sensor.battery_health_power_current
+            name: Leistung aktuell
+          - entity: sensor.battery_health_discharged_energy
+            name: Entladene Energie (Abschnitt)
+          - entity: sensor.battery_health_discharged_energy_total
+            name: Entladene Energie (Total)
+          - entity: sensor.battery_health_calculation_ready
+            name: Berechnung bereit
+      - type: history-graph
+        title: SOH Verlauf (48h)
+        hours_to_show: 48
+        refresh_interval: 0
+        entities:
+          - entity: sensor.battery_health_soh_current
+            name: SOH aktuell
+          - entity: sensor.battery_health_soh_average
+            name: SOH Mittelwert
+      - type: history-graph
+        title: Energie und Zyklen (7 Tage)
+        hours_to_show: 168
+        refresh_interval: 0
+        entities:
+          - entity: sensor.battery_health_discharged_energy_total
+            name: Entladen gesamt
+          - entity: sensor.battery_health_full_charge_cycles
+            name: Vollstaendige Ladezyklen
+>>>>>>> 24f5369 (Initial release: BatteryHealth custom component)

@@ -1,0 +1,25 @@
+{
+  "title": "BatteryHealth Sensor",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up BatteryHealth Sensor",
+        "description": "Choose SOC and battery power entities.\n\nCurrent values:\n{soc_entity_current}\n{power_entity_current}",
+        "data": {
+          "name": "Name",
+          "soc_entity": "Battery SOC entity",
+          "power_entity": "Battery power entity",
+          "nominal_capacity_kwh": "Nominal capacity (kWh)",
+          "invert_power_sign": "Invert power sign (if discharge is negative)"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {}
+  },
+  "error": {
+    "entity_not_found": "Selected entity not found. Please choose an existing entity.",
+    "invalid_capacity": "Nominal capacity must be greater than 0."
+  }
+}

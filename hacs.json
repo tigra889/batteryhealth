@@ -1,5 +1,13 @@
+<<<<<<< HEAD
 {
   "name": "BatteryHealth Sensor",
   "content_in_root": true,
   "render_readme": true
 }
+=======
+{
+  "name": "BatteryHealth Sensor",
+  "content_in_root": true,
+  "render_readme": true
+}
+>>>>>>> 24f5369 (Initial release: BatteryHealth custom component)
