@@ -1,4 +1,19 @@
 # BatteryHealth Sensor
+
+## Changelog
+
+### v1.4.0 (2026-06-12)
+- SOH measurement section finalized only when SOC rises again (no fixed SOC-drop interval)
+- Only one SOH sample recorded per discharge section to avoid skewing the average
+- Full-charge plateau detection: positive power at SOC >= 99.5 % is not counted as discharge energy
+- New service batteryhealth.reset_history to clear SOH history (optional entry_id parameter)
+- New config option soc_rise_hysteresis: configurable SOC rise threshold for section detection (default 0.3 %)
+- Sensor display name now follows config entry title — rename takes effect after integration reload
+- Dashboard updated for multiple devices: auto-discovery overview tab and per-device detail tabs
+
+### v1.3.0
+- Initial public release via HACS
+
 ## EN
 
 ### Overview
