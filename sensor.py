@@ -20,7 +20,7 @@ CONF_SOC_RISE_HYSTERESIS = "soc_rise_hysteresis"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     data = config_entry.data
-    name = data.get(CONF_NAME, "Battery Health")
+    name = config_entry.title or data.get(CONF_NAME, "Battery Health")
     soc_entity = data.get(CONF_SOC_ENTITY) or data.get(CONF_SOURCE)
     power_entity = data.get(CONF_POWER_ENTITY)
     nominal_capacity_kwh = data.get(CONF_NOMINAL_CAPACITY_KWH, 10.0)
