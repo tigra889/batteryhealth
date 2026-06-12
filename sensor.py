@@ -259,6 +259,9 @@ class BatteryHealthRuntime:
 
     def reset_history(self) -> None:
         self.soh_history.clear()
+        self.soh_current = None
+        self.raw_health_percent = None
+        self.estimated_capacity_kwh = None
         self._notify_listeners()
 
     def _finalize_section_measurement(self) -> None:
