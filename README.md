@@ -15,6 +15,7 @@ Setup is config-flow-only in Home Assistant.
   - soc_entity (battery SOC sensor, 0..100 %)
   - power_entity (power sensor)
   - nominal_capacity_kwh (nominal battery capacity)
+  - soc_rise_hysteresis (SOC increase threshold to close a section, default 0.3 %)
   - invert_power_sign (enable only if discharge is reported as negative)
 
 ### Install via HACS
@@ -39,12 +40,13 @@ Setup is config-flow-only in Home Assistant.
 3. Manage SOC reference:
   - first valid SOC sets soc_reference
   - if soc_value > soc_reference + 0.3, reset section values
-4. Compute SOH only when:
-  - soc_drop >= 3.0
-  - discharged_energy_kwh > 0
-  - nominal_capacity_kwh > 0
+4. SOH measurement section behavior:
+  - a section starts at current SOC reference
+  - while SOC falls, the minimum SOC in section is tracked
+  - SOH is finalized only when SOC rises above the reference (new section start)
+  - no fixed SOC interval threshold is used
 5. Formulas:
-  - soc_drop = soc_reference - soc_value
+  - soc_drop = soc_reference - soc_min_in_section
   - estimated_capacity_kwh = discharged_energy_kwh / (soc_drop / 100)
   - raw_health_percent = (estimated_capacity_kwh / nominal_capacity_kwh) * 100
   - soh_current = round(max(0, raw_health_percent), 2)
@@ -135,7 +137,15 @@ Per config entry, these sensor entities are created:
 
 - Discharge should be positive power. Otherwise enable invert_power_sign.
 - If SOC or Power is temporarily unavailable, calculation pauses until valid states return.
-- SOH is section-based and requires at least 3 % SOC drop.
+- SOH is section-based and one sample is finalized when SOC rises and a new section begins.
+- Only one SOH sample is added to history per discharge section to avoid skewing the average.
+- At SOC near 100 % on a full-charge plateau, positive power is ignored for energy integration to avoid top-off distortion.
+
+### Service
+
+- Service: batteryhealth.reset_history
+- Optional field: entry_id (reset one config entry)
+- Without entry_id, SOH history is reset for all BatteryHealth entries.
 
 ## DE
 
@@ -153,6 +163,7 @@ Die Einrichtung erfolgt ausschliesslich ueber den Config Flow.
   - soc_entity (Batterie-SOC-Sensor, 0..100 %)
   - power_entity (Leistungssensor)
   - nominal_capacity_kwh (Nennkapazitaet)
+  - soc_rise_hysteresis (SOC-Anstieg fuer Abschnittsabschluss, Standard 0.3 %)
   - invert_power_sign (nur aktivieren, wenn Entladung negativ geliefert wird)
 
 ### Installation ueber HACS
@@ -177,12 +188,13 @@ Die Einrichtung erfolgt ausschliesslich ueber den Config Flow.
 3. SOC-Referenz wird verwaltet:
   - erste gueltige SOC-Messung setzt soc_reference
   - bei soc_value > soc_reference + 0.3 startet ein neuer Abschnitt
-4. SOH wird nur berechnet, wenn:
-  - soc_drop >= 3.0
-  - discharged_energy_kwh > 0
-  - nominal_capacity_kwh > 0
+4. Verhalten je SOH-Messabschnitt:
+  - ein Abschnitt startet bei aktueller SOC-Referenz
+  - waehrend SOC faellt, wird der minimale SOC im Abschnitt verfolgt
+  - SOH wird erst abgeschlossen, wenn SOC wieder ueber die Referenz steigt (neuer Abschnitt)
+  - es gibt keinen festen SOC-Intervall-Schwellwert
 5. Formeln:
-  - soc_drop = soc_reference - soc_value
+  - soc_drop = soc_reference - soc_min_in_section
   - estimated_capacity_kwh = discharged_energy_kwh / (soc_drop / 100)
   - raw_health_percent = (estimated_capacity_kwh / nominal_capacity_kwh) * 100
   - soh_current = round(max(0, raw_health_percent), 2)
@@ -273,4 +285,12 @@ Pro Config Entry werden diese Sensoren erstellt:
 
 - Entladung sollte als positive Leistung vorliegen. Sonst invert_power_sign aktivieren.
 - Wenn SOC oder Leistung kurz unavailable ist, pausiert die Berechnung bis wieder gueltige Werte vorliegen.
-- Die SOH-Berechnung ist abschnittsbasiert und braucht mindestens 3 % SOC-Abfall.
+- Die SOH-Berechnung ist abschnittsbasiert; ein Messwert wird abgeschlossen, wenn SOC wieder steigt und ein neuer Abschnitt beginnt.
+- Pro Entladeabschnitt wird nur ein SOH-Wert in die Historie geschrieben, damit der Mittelwert nicht verzerrt.
+- Bei SOC nahe 100 % auf dem Voll-Ladeplateau wird positive Leistung nicht als Energie integriert, um Top-Off-Verzerrung zu vermeiden.
+
+### Service
+
+- Service: batteryhealth.reset_history
+- Optionales Feld: entry_id (setzt nur einen Config Entry zurueck)
+- Ohne entry_id wird die SOH-Historie fuer alle BatteryHealth-Entries zurueckgesetzt.

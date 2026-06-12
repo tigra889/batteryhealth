@@ -15,6 +15,7 @@ CONF_SOC_ENTITY = "soc_entity"
 CONF_POWER_ENTITY = "power_entity"
 CONF_NOMINAL_CAPACITY_KWH = "nominal_capacity_kwh"
 CONF_INVERT_POWER_SIGN = "invert_power_sign"
+CONF_SOC_RISE_HYSTERESIS = "soc_rise_hysteresis"
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -24,6 +25,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     power_entity = data.get(CONF_POWER_ENTITY)
     nominal_capacity_kwh = data.get(CONF_NOMINAL_CAPACITY_KWH, 10.0)
     invert_power_sign = data.get(CONF_INVERT_POWER_SIGN, False)
+    soc_rise_hysteresis = data.get(CONF_SOC_RISE_HYSTERESIS, 0.3)
 
     if not soc_entity:
         _LOGGER.warning("Config entry '%s' has no SOC entity configured", config_entry.entry_id)
@@ -36,7 +38,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         power_entity_id=power_entity,
         nominal_capacity_kwh=nominal_capacity_kwh,
         invert_power_sign=invert_power_sign,
+        soc_rise_hysteresis=soc_rise_hysteresis,
     )
+
+    hass.data.setdefault(DOMAIN, {}).setdefault("runtimes", {})[config_entry.entry_id] = runtime
 
     async_add_entities(
         [
@@ -192,6 +197,7 @@ class BatteryHealthRuntime:
         power_entity_id,
         nominal_capacity_kwh,
         invert_power_sign,
+        soc_rise_hysteresis,
     ):
         self._hass = hass
         self.name = name
@@ -199,12 +205,14 @@ class BatteryHealthRuntime:
         self.power_entity_id = power_entity_id
         self.nominal_capacity_kwh = nominal_capacity_kwh
         self.invert_power_sign = invert_power_sign
+        self.soc_rise_hysteresis = max(0.0, float(soc_rise_hysteresis))
 
         self.soc_value = None
         self.power_value = None
         self.discharged_energy_kwh = 0.0
         self.discharged_energy_total_kwh = 0.0
         self.soc_reference = None
+        self.soc_min_in_section = None
         self.soc_drop = None
         self.estimated_capacity_kwh = None
         self.raw_health_percent = None
@@ -248,6 +256,25 @@ class BatteryHealthRuntime:
     def _notify_listeners(self) -> None:
         for listener in list(self._listeners):
             listener()
+
+    def reset_history(self) -> None:
+        self.soh_history.clear()
+        self._notify_listeners()
+
+    def _finalize_section_measurement(self) -> None:
+        if self.soc_reference is None or self.soc_min_in_section is None:
+            return
+
+        soc_drop = self.soc_reference - self.soc_min_in_section
+        self.soc_drop = soc_drop
+
+        if soc_drop > 0 and self.discharged_energy_kwh > 0 and self.nominal_capacity_kwh > 0:
+            self.estimated_capacity_kwh = self.discharged_energy_kwh / (soc_drop / 100.0)
+            self.raw_health_percent = (
+                self.estimated_capacity_kwh / self.nominal_capacity_kwh
+            ) * 100.0
+            self.soh_current = round(max(0.0, self.raw_health_percent), 2)
+            self.soh_history.append(self.soh_current)
 
     async def async_attach_entity(self) -> None:
         self._attached_entities += 1
@@ -369,47 +396,46 @@ class BatteryHealthRuntime:
                     self._invalid_power_logged = True
                 self.power_value = None
 
+        full_charge_plateau = (
+            self.soc_value is not None
+            and self.soc_reference is not None
+            and self.soc_value >= 99.5
+            and self.soc_value >= (self.soc_reference - 0.05)
+        )
+
         if self.last_update_utc is not None and self.power_value is not None:
             delta_hours = (now_utc - self.last_update_utc).total_seconds() / 3600.0
             if 0 < delta_hours <= 24:
                 discharge_power_w = max(self.power_value, 0.0)
-                delta_energy_kwh = (discharge_power_w / 1000.0) * delta_hours
-                self.discharged_energy_kwh += delta_energy_kwh
-                self.discharged_energy_total_kwh += delta_energy_kwh
+                if not (full_charge_plateau and discharge_power_w > 0):
+                    delta_energy_kwh = (discharge_power_w / 1000.0) * delta_hours
+                    self.discharged_energy_kwh += delta_energy_kwh
+                    self.discharged_energy_total_kwh += delta_energy_kwh
 
         self.last_update_utc = now_utc
 
         if self.soc_value is not None:
             if self.soc_reference is None:
                 self.soc_reference = self.soc_value
-            elif self.soc_value > (self.soc_reference + 0.3):
+                self.soc_min_in_section = self.soc_value
+            elif self.soc_value > (self.soc_reference + self.soc_rise_hysteresis):
+                self._finalize_section_measurement()
                 self.soc_reference = self.soc_value
+                self.soc_min_in_section = self.soc_value
                 self.discharged_energy_kwh = 0.0
-                self.estimated_capacity_kwh = None
-                self.raw_health_percent = None
-                self.soh_current = None
+            else:
+                if self.soc_min_in_section is None:
+                    self.soc_min_in_section = self.soc_value
+                else:
+                    self.soc_min_in_section = min(self.soc_min_in_section, self.soc_value)
 
             self.soc_drop = (
-                self.soc_reference - self.soc_value if self.soc_reference is not None else None
+                self.soc_reference - self.soc_min_in_section
+                if self.soc_reference is not None and self.soc_min_in_section is not None
+                else None
             )
-
-            if (
-                self.soc_drop is not None
-                and self.soc_drop >= 3.0
-                and self.discharged_energy_kwh > 0
-                and self.nominal_capacity_kwh > 0
-            ):
-                self.estimated_capacity_kwh = self.discharged_energy_kwh / (self.soc_drop / 100.0)
-                self.raw_health_percent = (
-                    self.estimated_capacity_kwh / self.nominal_capacity_kwh
-                ) * 100.0
-                self.soh_current = round(max(0.0, self.raw_health_percent), 2)
-                self.soh_history.append(self.soh_current)
-            else:
-                self.soh_current = None
         else:
             self.soc_drop = None
-            self.soh_current = None
 
         self._notify_listeners()
 
@@ -449,6 +475,7 @@ class BatteryHealthMetricSensor(SensorEntity):
             "soc_entity": self._runtime.soc_entity_id,
             "power_entity": self._runtime.power_entity_id,
             "invert_power_sign": self._runtime.invert_power_sign,
+            "soc_rise_hysteresis": self._runtime.soc_rise_hysteresis,
             "soh_measurements_count": len(self._runtime.soh_history),
             "raw_health_percent": self._runtime.raw_health_percent,
         }

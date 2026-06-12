@@ -1,0 +1,10 @@
+reset_history:
+  name: Reset SOH history
+  description: Clears SOH measurement history for one config entry or all entries.
+  fields:
+    entry_id:
+      name: Config entry id
+      description: Optional config entry id. If omitted, all BatteryHealth histories are reset.
+      required: false
+      selector:
+        text:

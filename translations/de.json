@@ -10,6 +10,7 @@
           "soc_entity": "Batterie-SOC-Entitaet",
           "power_entity": "Batterie-Leistungs-Entitaet",
           "nominal_capacity_kwh": "Nennkapazitaet (kWh)",
+          "soc_rise_hysteresis": "SOC-Anstiegs-Hysterese fuer Abschnittswechsel (%)",
           "invert_power_sign": "Leistungsvorzeichen umkehren (wenn Entladung negativ ist)"
         }
       }
@@ -20,6 +21,7 @@
   },
   "error": {
     "entity_not_found": "Ausgewaehlte Entitaet nicht gefunden. Waehle bitte eine vorhandene Entitaet.",
-    "invalid_capacity": "Nennkapazitaet muss groesser als 0 sein."
+    "invalid_capacity": "Nennkapazitaet muss groesser als 0 sein.",
+    "invalid_hysteresis": "SOC-Anstiegs-Hysterese muss groesser oder gleich 0 sein."
   }
 }

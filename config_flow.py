@@ -9,6 +9,7 @@ CONF_SOC_ENTITY = "soc_entity"
 CONF_POWER_ENTITY = "power_entity"
 CONF_NOMINAL_CAPACITY_KWH = "nominal_capacity_kwh"
 CONF_INVERT_POWER_SIGN = "invert_power_sign"
+CONF_SOC_RISE_HYSTERESIS = "soc_rise_hysteresis"
 
 class BatteryHealthConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for BatteryHealth."""
@@ -23,6 +24,7 @@ class BatteryHealthConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             soc_entity = user_input.get(CONF_SOC_ENTITY)
             power_entity = user_input.get(CONF_POWER_ENTITY)
             nominal_capacity = user_input.get(CONF_NOMINAL_CAPACITY_KWH, 10.0)
+            soc_rise_hysteresis = user_input.get(CONF_SOC_RISE_HYSTERESIS, 0.3)
             
             # Check if entities exist
             if soc_entity and self.hass.states.get(soc_entity) is None:
@@ -34,6 +36,9 @@ class BatteryHealthConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Check nominal capacity validity
             if nominal_capacity <= 0:
                 errors[CONF_NOMINAL_CAPACITY_KWH] = "invalid_capacity"
+
+            if soc_rise_hysteresis < 0:
+                errors[CONF_SOC_RISE_HYSTERESIS] = "invalid_hysteresis"
             
             if not errors:
                 return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
@@ -53,6 +58,7 @@ class BatteryHealthConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     selector.EntitySelectorConfig(domain=["sensor"], device_class=["power"])
                 ),
                 vol.Required(CONF_NOMINAL_CAPACITY_KWH, default=10.0): vol.Coerce(float),
+                vol.Optional(CONF_SOC_RISE_HYSTERESIS, default=0.3): vol.Coerce(float),
                 vol.Optional(CONF_INVERT_POWER_SIGN, default=False): bool,
             }),
             errors=errors,

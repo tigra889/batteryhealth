@@ -10,6 +10,7 @@
           "soc_entity": "Battery SOC entity",
           "power_entity": "Battery power entity",
           "nominal_capacity_kwh": "Nominal capacity (kWh)",
+          "soc_rise_hysteresis": "SOC rise hysteresis for section reset (%)",
           "invert_power_sign": "Invert power sign (if discharge is negative)"
         }
       }
@@ -20,6 +21,7 @@
   },
   "error": {
     "entity_not_found": "Selected entity not found. Please choose an existing entity.",
-    "invalid_capacity": "Nominal capacity must be greater than 0."
+    "invalid_capacity": "Nominal capacity must be greater than 0.",
+    "invalid_hysteresis": "SOC rise hysteresis must be greater than or equal to 0."
   }
 }
