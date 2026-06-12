@@ -1,8 +1,65 @@
 title: BatteryHealth
 views:
-  - title: Overview
-    path: batteryhealth
+
+  # ── Übersicht: alle Geräte automatisch erkannt via Jinja2 ─────────────────
+  - title: Uebersicht
+    path: batteryhealth-uebersicht
     icon: mdi:battery-heart-variant
+    cards:
+      - type: markdown
+        content: >-
+          {% set ns = namespace(rows='') %}
+          {% for s in states.sensor if 'SOH Current' in s.name and 'soc_entity' in s.attributes %}
+            {% set base = s.entity_id | replace('_soh_current', '') %}
+            {% set soh = s.state | float(default=-1) %}
+            {% if soh < 0 %}
+              {% set badge = '—' %}{% set soh_str = '—' %}
+            {% else %}
+              {% set soh_str = soh | round(1) ~ ' %' %}
+              {% if soh <= 60 %}{% set badge = '<span style="color:#d32f2f">Schlecht</span>' %}
+              {% elif soh <= 80 %}{% set badge = '<span style="color:#ef6c00">Mittel</span>' %}
+              {% elif soh <= 90 %}{% set badge = '<span style="color:#f9a825">Gut</span>' %}
+              {% else %}{% set badge = '<span style="color:#2e7d32">Sehr gut</span>' %}{% endif %}
+            {% endif %}
+            {% set avg = states(base ~ '_soh_average') | float(default=-1) %}
+            {% set avg_str = avg | round(1) ~ ' %' if avg >= 0 else '—' %}
+            {% set cnt = states(base ~ '_soh_measurements') %}
+            {% set dev = s.name | replace(' SOH Current', '') %}
+            {% set ns.rows = ns.rows ~ '| ' ~ dev ~ ' | ' ~ soh_str ~ ' | ' ~ avg_str ~ ' | ' ~ cnt ~ ' | ' ~ badge ~ ' |\n' %}
+          {% endfor %}
+          ## BatteryHealth Geraete
+
+          | Geraet | SOH aktuell | SOH Mittelwert | Messungen | Bewertung |
+          |---|---|---|---|---|
+          {{ ns.rows }}
+
+      - type: history-graph
+        title: SOH Verlauf aller Geraete (48h)
+        hours_to_show: 48
+        refresh_interval: 0
+        entities:
+          # Fuer jedes weitere Geraet sensor.{name}_soh_current und _soh_average ergaenzen
+          - entity: sensor.battery_health_soh_current
+            name: Battery Health – SOH aktuell
+          - entity: sensor.battery_health_soh_average
+            name: Battery Health – SOH Mittelwert
+
+      - type: history-graph
+        title: Entladeenergie aller Geraete (7 Tage)
+        hours_to_show: 168
+        refresh_interval: 0
+        entities:
+          # Fuer jedes weitere Geraet sensor.{name}_discharged_energy_total ergaenzen
+          - entity: sensor.battery_health_discharged_energy_total
+            name: Battery Health – Entladen gesamt
+
+  # ── Detailtab Geraet 1 ────────────────────────────────────────────────────
+  # Diesen Tab fuer jedes weitere Geraet duplizieren.
+  # Alle entity-IDs nach Schema sensor.{gerätename}_{metrik} anpassen,
+  # z.B. sensor.haus_batterie_soh_current fuer Geraetename "Haus Batterie".
+  - title: Battery Health
+    path: batteryhealth-device1
+    icon: mdi:battery-heart
     cards:
       - type: horizontal-stack
         cards:
@@ -30,10 +87,12 @@ views:
               green: 90
       - type: markdown
         content: >-
-          {% set soh = states('sensor.battery_health_soh_current') | float(0) %}
+          {% set soh = states('sensor.battery_health_soh_current') | float(default=-1) %}
           ## SOH Bewertung
 
-          {% if soh <= 60 %}
+          {% if soh < 0 %}
+          <span style="color:#9e9e9e;">Noch keine Messung abgeschlossen.</span>
+          {% elif soh <= 60 %}
           <span style="color:#d32f2f;"><b>Schlecht</b> (<= 60%)</span>
           {% elif soh <= 80 %}
           <span style="color:#ef6c00;"><b>Mittel</b> (60-80%)</span>
@@ -43,7 +102,7 @@ views:
           <span style="color:#2e7d32;"><b>Sehr gut</b> (> 90%)</span>
           {% endif %}
 
-          Aktuell: **{{ soh | round(2) }} %**
+          {% if soh >= 0 %}Aktuell: **{{ soh | round(2) }} %**{% endif %}
 
           Legende: Rot <= 60, Orange 60-80, Gelb 80-90, Gruen > 90.
       - type: entities
